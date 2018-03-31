@@ -1,7 +1,7 @@
 #!/bin/bash
 
-version="2016.6.27"
-pidgin_version="2.11.0"
+version="2018.3.31"
+pidgin_version="2.12.0"
 devroot="$1"
 path="$2"
 
@@ -70,7 +70,7 @@ cd - > /dev/null
 system=$(uname -o)
 cache="$devroot/downloads"
 win32="$devroot/win32-dev"
-nsis="nsis-2.46"
+nsis="nsis-2.51"
 mingw="mingw-gcc-4.7.2"
 gtkspell="gtkspell-2.0.16"
 gcc_core44="gcc-core-4.4.0-mingw32-dll"
@@ -112,7 +112,7 @@ extract() {
     info "Extracting" "${files[0]:+${files[0]##*/}${files[1]:+ and other files} from }${compressed_name}"
     mkdir -p "$directory"
     case "$format" in
-        bsdtar)  bsdtar -xzf          "$compressed"  --directory "$directory" ;;
+        bsdtar)  tar -xzf             "$compressed"  --directory "$directory" ;;
         lzma)    tar --lzma -xf       "$compressed"  --directory "$directory" ;;
         bzip2)   tar -xjf             "$compressed"  --directory "$directory" "${files[@]}" ;;
         gzip)    tar -xzf             "$compressed"  --directory "$directory" ;;
@@ -126,6 +126,7 @@ install() {
     case "${system}" in
         Cygwin) apt-cyg install "$package"             >/dev/null 2>&1 || oops "failed installing ${package}" ;;
         Msys) mingw-get install "$package" --verbose=0 >/dev/null 2>&1 || oops "failed installing ${package}" ;;
+        GNU/Linux) sudo apt-get --yes install "$package" >/dev/null 2>&1 || oops "failed installing ${package}" ;;
     esac
 }
 
@@ -156,6 +157,29 @@ if [[ "${system}" = Cygwin ]]; then
     install 'unzip'
     install 'wget'
     install 'zip'
+elif [[ "${system}" = "GNU/Linux" ]]; then
+    install 'build-essential'
+    install 'ca-certificates'
+    install 'coreutils'
+    install 'bzip2'
+    install 'gawk'
+    install 'gnupg'
+    install 'grep'
+    install 'libc6-dev'
+    install 'make'
+    install 'patch'
+    install 'sed'
+    install 'tar'
+    install 'unzip'
+    install 'wget'
+    install 'zip'
+    install 'mingw-w64'
+    install 'mingw-w64-common'
+    install 'mingw-w64-i686-dev'
+    install 'mingw-w64-tools'
+    install 'scons'
+    install 'gcc-multilib'
+    install 'g++-multilib'
 else
     if available mingw-get; then
         install 'mingw32-bzip2'
@@ -176,7 +200,7 @@ echo
 
 # Download GCC
 step "Downloading specific MinGW GCC"
-download "${cache}/${mingw}" "${mingw_base_url}/binutils/binutils-2.23.1/binutils-2.23.1-1-mingw32-bin.tar.lzma/download"
+download "${cache}/${mingw}" "${mingw_base_url}/binutils/binutils-2.24/binutils-2.24-1-mingw32-bin.tar.xz/download"
 download "${cache}/${mingw}" "${mingw_base_url}/gcc/Version4/gcc-4.7.2-1/gcc-core-4.7.2-1-mingw32-bin.tar.lzma/download"
 download "${cache}/${mingw}" "${mingw_base_url}/gcc/Version4/gcc-4.7.2-1/${gcc_source}.tar.lzma/download"
 download "${cache}/${mingw}" "${mingw_base_url}/gcc/Version4/gcc-4.7.2-1/libgcc-4.7.2-1-mingw32-dll-1.tar.lzma/download"
@@ -223,7 +247,7 @@ download "${cache}" "${pidgin_base_url}/silc-toolkit-1.1.12.tar.gz"
 download "${cache}" "${pidgin_base_url}/${pidgin_inst_deps}.tar.gz"
 download "${cache}" "http://strawberryperl.com/download/${perl_version}/${perl}.zip"
 download "${cache}" "http://nsis.sourceforge.net/mediawiki/images/1/1c/Nsisunz.zip"
-download "${cache}" "http://sourceforge.net/projects/nsis/files/NSIS%202/2.46/${nsis}.zip/download"
+download "${cache}" "http://sourceforge.net/projects/nsis/files/NSIS%202/2.51/${nsis}.zip/download"
 echo
 
 # Extract GCC
@@ -239,6 +263,7 @@ extract bzip2 "$devroot" "${cache}/pidgin-${pidgin_version}.tar.bz2" && info 'Ex
 echo 'MONO_SIGNCODE = echo ***Bypassing signcode***' >  "${source_directory}/local.mak"
 echo 'GPG_SIGN = echo ***Bypassing gpg***'           >> "${source_directory}/local.mak"
 [[ "${system}" = Msys ]] && patch -p2 --directory "${source_directory}" < "$(dirname "$0")/pidgin-wget-msys.patch"
+[[ "${system}" = "GNU/Linux" ]] && patch -p0 --directory "${source_directory}" < "$(dirname "$0")/pidgin-cross-compile.patch"
 echo
 
 # LibSSP sources
@@ -272,6 +297,12 @@ extract gzip   "${win32}/${gcc_core44}"   "${cache}/${gcc_core44}.tar.gz"
 info "Installing" "SHA1 plugin for NSIS"; cp "${win32}/${pidgin_inst_deps}/SHA1Plugin.dll" "${win32}/${nsis}/Plugins"
 echo
 
+if [[ "${system}" = "GNU/Linux" ]]; then
+    step "Installing NSIS Plugins Globally"
+    sudo cp "${win32}/${pidgin_inst_deps}/SHA1Plugin.dll" /usr/share/nsis/Plugins
+    sudo cp "${win32}/${nsis}/Plugins/nsisunz.dll" /usr/share/nsis/Plugins
+fi
+
 # Finishing
 if [[ "${system}" = Cygwin ]]; then
     step "Setting executable permissions"
@@ -285,3 +316,10 @@ else
     fi
 fi
 echo
+
+step "Build Pidgin"
+cd "${source_directory}"
+make -f Makefile.mingw clean
+make -f Makefile.mingw install
+make -f Makefile.mingw installers
+

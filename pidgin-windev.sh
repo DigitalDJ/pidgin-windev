@@ -1,7 +1,7 @@
 #!/bin/bash
 
 version="2018.3.31"
-pidgin_version="2.12.0"
+pidgin_version="2.13.0"
 devroot="$1"
 path="$2"
 
@@ -260,8 +260,18 @@ echo
 # Extract Pidgin
 step "Extracting Pidgin source code"
 extract bzip2 "$devroot" "${cache}/pidgin-${pidgin_version}.tar.bz2" && info 'Extracted to' "$source_directory"
-echo 'MONO_SIGNCODE = echo ***Bypassing signcode***' >  "${source_directory}/local.mak"
-echo 'GPG_SIGN = echo ***Bypassing gpg***'           >> "${source_directory}/local.mak"
+echo 'MONO_SIGNCODE = echo ***Bypassing signcode***
+GPG_SIGN = echo ***Bypassing gpg***
+SHELL := /bin/bash
+CC := /usr/bin/i686-w64-mingw32-gcc
+GMSGFMT := msgfmt
+MAKENSIS := /usr/bin/makensis
+WINDRES := /usr/bin/i686-w64-mingw32-windres
+STRIP := /usr/bin/i686-w64-mingw32-strip
+INTLTOOL_MERGE := /usr/bin/intltool-merge
+
+INCLUDE_PATHS := -I$(PIDGIN_TREE_TOP)/../win32-dev/w32api/include
+LIB_PATHS := -L$(PIDGIN_TREE_TOP)/../win32-dev/w32api/lib'           >> "${source_directory}/local.mak"
 [[ "${system}" = Msys ]] && patch -p2 --directory "${source_directory}" < "$(dirname "$0")/pidgin-wget-msys.patch"
 [[ "${system}" = "GNU/Linux" ]] && patch -p0 --directory "${source_directory}" < "$(dirname "$0")/pidgin-cross-compile.patch"
 echo

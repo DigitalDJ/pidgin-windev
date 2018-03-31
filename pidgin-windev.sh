@@ -8,10 +8,10 @@ path="$2"
 if [[ "$1" = -* || -z "$devroot" || ( -n "$path" && "$path" != --path ) ]]; then echo "
     Pidgin Windows Development Setup ${version}
     Target Pidgin version ${pidgin_version}
-    Copyright 2012-2016 Renato Silva
+    Copyright 2012-2018 Renato Silva, Grant Pannell
     Licensed under BSD
 
-    This Cygwin/MSYS script sets up a Windows build environment for Pidgin in
+    This Cygwin/MSYS/Linux script sets up a Windows build environment for Pidgin in
     one single shot, without the long manual steps described in the official
     documentation. These steps are automatically executed, except for GnuPG
     installation in MSYS. After running this tool you can configure system path
